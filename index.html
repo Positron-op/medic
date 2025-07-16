@@ -1,0 +1,36 @@
+<script>
+  // The API URL will automatically adapt to the Vercel deployment
+  const API_URL = window.location.hostname === 'localhost' 
+    ? 'http://localhost:3000' 
+    : `https://${window.location.hostname}`;
+
+  // Update the fetch calls to use the API_URL
+  async function getResponse() {
+    const inputElem = document.getElementById('userInput');
+    const input = inputElem.value.trim();
+    if (!input) return;
+    
+    const messagesDiv = document.getElementById('messages');
+    messagesDiv.innerHTML += `<div class='text-right text-blue-600 my-2'>${input}</div>`;
+
+    try {
+      const res = await fetch(`${API_URL}/api/ai`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: input })
+      });
+      const result = await res.json();
+      
+      if (result.text) {
+        messagesDiv.innerHTML += `<div class='text-left text-green-700 my-2'>${result.text}</div>`;
+      } else {
+        messagesDiv.innerHTML += `<div class='text-left text-red-500 my-2'>Sorry, I couldn't find an answer to your question.</div>`;
+      }
+    } catch (e) {
+      messagesDiv.innerHTML += `<div class='text-left text-red-500 my-2'>Sorry, there was an error contacting the AI service.</div>`;
+    }
+    
+    inputElem.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+</script>
