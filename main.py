@@ -7,7 +7,7 @@ from typing import Optional
 
 app = FastAPI()
 
-# Allow CORS for local development
+# Allow CORS for Vercel deployment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,17 +20,12 @@ app.add_middleware(
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AIzaSyDdK_Q6dLIg1vevncfSekPsYuJ65C4xKtI")
 
 # Initialize Gemini
-model = None
-if GEMINI_API_KEY:
-    try:
-        genai.configure(api_key=GEMINI_API_KEY)
-        model = genai.GenerativeModel("gemini-pro")
-        print("Gemini API configured successfully")
-    except Exception as e:
-        print(f"Error initializing Gemini: {e}")
-        model = None
-else:
-    print("Warning: GEMINI_API_KEY environment variable not set")
+try:
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel("gemini-pro")
+except Exception as e:
+    print(f"Error initializing Gemini: {e}")
+    model = None
 
 class PromptRequest(BaseModel):
     prompt: str
@@ -41,7 +36,7 @@ async def ai_endpoint(request: PromptRequest):
     if not model:
         raise HTTPException(
             status_code=500, 
-            detail="Gemini API not configured. Please set GEMINI_API_KEY environment variable."
+            detail="Gemini API not configured properly."
         )
     
     prompt = request.prompt.strip()
@@ -63,13 +58,6 @@ async def ai_endpoint(request: PromptRequest):
     - Always format responses in markdown for better readability
 
     User question: "{prompt}"
-
-    Remember to:
-    1. First address the immediate question
-    2. Provide relevant medical information
-    3. Include locally available treatment options when applicable
-    4. Add preventive measures if relevant
-    5. Always end with the medical disclaimer
     """
 
     try:
@@ -82,18 +70,9 @@ async def ai_endpoint(request: PromptRequest):
         print(f"Gemini API error: {e}")
         return {"error": "Sorry, I'm having trouble connecting to my AI service. Please try again later."}
 
-@app.get("/")
-async def root():
-    return {"message": "MediAid API is running"}
-
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {
         "status": "healthy", 
-        "gemini_configured": model is not None,
-        "api_key_set": GEMINI_API_KEY is not None
+        "gemini_configured": model is not None
     }
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
